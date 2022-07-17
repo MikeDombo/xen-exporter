@@ -1,0 +1,2 @@
+pyjson5
+XenAPI
