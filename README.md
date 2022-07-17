@@ -8,13 +8,20 @@ Automatically exports _all_ statistics from the [RRD metrics database](https://x
 ```cmd
 docker run -e XEN_USER=root -e XEN_PASSWORD=<password> -e XEN_HOST=<host> -e XEN_SSL_VERIFY=true -p 9100:9100 --rm ghcr.io/mikedombo/xen-exporter:latest
 ```
+
+# Grafana
+A Grafana dashboard is [available here](https://grafana.com/grafana/dashboards/16588) (id 16588), which graphs most of the critical metrics
+gathered by this exporter.
+
+![Grafana dashboard sample 1](https://grafana.com/api/dashboards/16588/images/12479/image)
+![Grafana dashboard sample 2](https://grafana.com/api/dashboards/16588/images/12482/image)
+
 # Limitations
 
 No Prometheus help (comments) or types are currently emitted since all the metrics are being formatted almost entirely automatically.
 Meaning that there is no list in the code of what metrics will be emitted, nor is there a list of nice descriptions for each metric type.
 
 # TODO
-- Grafana dashboard for all these metrics
 - Proper Prometheus help and types for known metrics
 - Additional metrics beyond what RRD provides? Perhaps like https://github.com/lovoo/xenstats_exporter
 # List of all statistics
