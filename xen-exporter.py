@@ -193,9 +193,6 @@ def collect_metrics():
             metric_type = metric_type.lower().replace("-", "_")
 
             tags = {f'{k}="{v}"' for k, v in extra_tags.items()}
-            if metric_type == "":
-                print("bad")
-                return
             output += f"xen_{collector_type}_{metric_type}{{{', '.join(tags)}}} {metrics['data'][0]['values'][i]}\n"
         collector_end_time = time.perf_counter()
         output += f"xen_collector_duration_seconds {collector_end_time - collector_start_time}\n"
