@@ -1,0 +1,22 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "master" ]
+    
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build and push Docker image
+      uses: pmorelli92/github-container-registry-build-push@2.0.0
+      with:
+        # Token such as GITHUB_TOKEN that has `write:packages` scope to authenticate against GCHR.
+        github-push-secret: ${{ secrets.GITHUB_TOKEN }}
+        # Docker Image name
+        docker-image-name: xen-exporter
