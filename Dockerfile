@@ -5,4 +5,6 @@ COPY . /app
 RUN python3 -m pip install -r /app/requirements.txt
 
 EXPOSE 9100/tcp
-CMD python3 /app/xen-exporter.py
+
+STOPSIGNAL SIGINT
+ENTRYPOINT [ "python3", "/app/xen-exporter.py" ]
