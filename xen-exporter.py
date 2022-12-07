@@ -23,7 +23,10 @@ def lookup_vm_name(vm_uuid, session):
 
 
 def lookup_sr_name_by_uuid(sr_uuid, session):
-    return session.xenapi.SR.get_name_label(session.xenapi.SR.get_by_uuid(sr_uuid))
+    try:
+       return session.xenapi.SR.get_name_label(session.xenapi.SR.get_by_uuid(sr_uuid))
+    except:
+       print("")
 
 
 def lookup_host_name(host_uuid, session):
