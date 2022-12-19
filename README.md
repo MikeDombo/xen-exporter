@@ -16,10 +16,51 @@ gathered by this exporter.
 ![Grafana dashboard sample 1](https://grafana.com/api/dashboards/16588/images/12479/image)
 ![Grafana dashboard sample 2](https://grafana.com/api/dashboards/16588/images/12482/image)
 
+
+
+# Example setup for a XenServer cluster
+
+docker-compose.yml
+
+```
+version: '2.4'
+services:
+  xen01:
+    container_name: xen01
+    image: ghcr.io/mikedombo/xen-exporter:latest
+    environment:
+      - XEN_HOST=10.10.10.101
+      - XEN_USER=root
+      - XEN_PASSWORD=s0m3f4ncyp4ssw0rd
+      - XEN_SSL_VERIFY=false
+
+  xen02:
+    container_name: xen02
+    image: ghcr.io/mikedombo/xen-exporter:latest
+    environment:
+      - XEN_HOST=10.10.10.102
+      - XEN_USER=root
+      - XEN_PASSWORD=s0m3f4ncyp4ssw0rd
+      - XEN_SSL_VERIFY=false
+```
+
+prometheus.yml
+
+```
+  - job_name: xenserver
+    scrape_interval: 60s
+    scrape_timeout: 50s
+    static_configs:
+    - targets:
+      - xen01:9100
+      - xen02:9100
+```
+
 # Limitations
 
 No Prometheus help (comments) or types are currently emitted since all the metrics are being formatted almost entirely automatically.
 Meaning that there is no list in the code of what metrics will be emitted, nor is there a list of nice descriptions for each metric type.
+When using a cluster, assumes that the username and password of the poolmaster and hosts are the same.
 
 # TODO
 - Proper Prometheus help and types for known metrics

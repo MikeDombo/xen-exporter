@@ -4,6 +4,7 @@ import urllib.request
 import time
 import ssl
 import os
+import re
 
 import pyjson5
 import XenAPI
@@ -22,7 +23,10 @@ def lookup_vm_name(vm_uuid, session):
 
 
 def lookup_sr_name_by_uuid(sr_uuid, session):
-    return session.xenapi.SR.get_name_label(session.xenapi.SR.get_by_uuid(sr_uuid))
+    try:
+       return session.xenapi.SR.get_name_label(session.xenapi.SR.get_by_uuid(sr_uuid))
+    except XenAPI.XenAPI.Failure:
+       return sr_uuid
 
 
 def lookup_host_name(host_uuid, session):
@@ -62,6 +66,19 @@ def get_or_set(d, key, func, *args):
         d[key] = func(key, *args)
     return d[key]
 
+def collect_poolmaster():
+    xen_user = os.getenv("XEN_USER", "root")
+    xen_password = os.getenv("XEN_PASSWORD", "")
+    xen_host = os.getenv("XEN_HOST", "localhost")
+    verify_ssl = "false"
+    verify_ssl = True if verify_ssl.lower() == "true" else False
+    try:
+       with Xen("https://" + xen_host, xen_user, xen_password, verify_ssl) as xen:
+          poolmaster = xen_host
+    except XenAPI.XenAPI.Failure as e:
+       ipPattern = re.compile('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
+       poolmaster = re.findall(ipPattern,str(e))[0]
+    return poolmaster
 
 class Xen:
     def __init__(self, url, username, password, verify_ssl):
@@ -106,9 +123,10 @@ def collect_metrics():
     verify_ssl = os.getenv("XEN_SSL_VERIFY", "true")
     verify_ssl = True if verify_ssl.lower() == "true" else False
 
+    xen_poolmaster = collect_poolmaster()
     collector_start_time = time.perf_counter()
 
-    with Xen("https://" + xen_host, xen_user, xen_password, verify_ssl) as xen:
+    with Xen("https://" + xen_poolmaster, xen_user, xen_password, verify_ssl) as xen:
         url = f"https://{xen_host}/rrd_updates?start={int(time.time()-10)}&json=true&host=true&cf=AVERAGE"
 
         req = urllib.request.Request(url)
