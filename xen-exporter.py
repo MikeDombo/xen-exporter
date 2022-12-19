@@ -25,8 +25,8 @@ def lookup_vm_name(vm_uuid, session):
 def lookup_sr_name_by_uuid(sr_uuid, session):
     try:
        return session.xenapi.SR.get_name_label(session.xenapi.SR.get_by_uuid(sr_uuid))
-    except:
-       print("")
+    except XenAPI.XenAPI.Failure:
+       return sr_uuid
 
 
 def lookup_host_name(host_uuid, session):
