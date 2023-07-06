@@ -6,7 +6,7 @@ Automatically exports _all_ statistics from the [RRD metrics database](https://x
 # Usage
 
 ```cmd
-docker run -e XEN_USER=root -e XEN_PASSWORD=<password> -e XEN_HOST=<host> -e XEN_SSL_VERIFY=true HALT_ON_NO_UUID=false -p 9100:9100 --rm ghcr.io/mikedombo/xen-exporter:latest
+docker run -e XEN_USER=root -e XEN_PASSWORD=<password> -e XEN_HOST=<host> -e XEN_SSL_VERIFY=true -p 9100:9100 --rm ghcr.io/mikedombo/xen-exporter:latest
 ```
 
 > HALT_ON_NO_UUID - optional, false by default. Ignores metrics with no UUID
