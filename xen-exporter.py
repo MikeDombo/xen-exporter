@@ -123,102 +123,117 @@ def collect_metrics():
     verify_ssl = os.getenv("XEN_SSL_VERIFY", "true")
     verify_ssl = True if verify_ssl.lower() == "true" else False
 
+    xen_host_up = True
+
     halt_on_no_uuid = os.getenv("HALT_ON_NO_UUID", "false")
     halt_on_no_uuid = True if halt_on_no_uuid.lower() == "true" else False
 
-    xen_poolmaster = collect_poolmaster()
+    output = ""
+
     collector_start_time = time.perf_counter()
+    try:
+        xen_poolmaster = collect_poolmaster()
+        collector_start_time = time.perf_counter()
+        with Xen("https://" + xen_poolmaster, xen_user, xen_password, verify_ssl) as xen:
+            url = f"https://{xen_host}/rrd_updates?start={int(time.time()-10)}&json=true&host=true&cf=AVERAGE"
 
-    with Xen("https://" + xen_poolmaster, xen_user, xen_password, verify_ssl) as xen:
-        url = f"https://{xen_host}/rrd_updates?start={int(time.time()-10)}&json=true&host=true&cf=AVERAGE"
+            req = urllib.request.Request(url)
+            req.add_header(
+                "Authorization",
+                "Basic "
+                + base64.b64encode((xen_user + ":" + xen_password).encode("utf-8")).decode(
+                    "utf-8"
+                ),
+            )
+            res = urllib.request.urlopen(
+                req, context=None if verify_ssl else ssl._create_unverified_context()
+            )
 
-        req = urllib.request.Request(url)
-        req.add_header(
-            "Authorization",
-            "Basic "
-            + base64.b64encode((xen_user + ":" + xen_password).encode("utf-8")).decode(
-                "utf-8"
-            ),
-        )
-        res = urllib.request.urlopen(
-            req, context=None if verify_ssl else ssl._create_unverified_context()
-        )
-        metrics = pyjson5.decode_io(res)
+            metrics = pyjson5.decode_io(res)
 
-        output = ""
-        for i, metric_name in enumerate(metrics["meta"]["legend"]):
-            metric_legend = metric_name.split(":")[1:]
-            collector_type = metric_legend[0]
-            collector = metric_legend[1]
-            metric_type = metric_legend[2]
-            extra_tags = {f"{collector_type}": collector}
+            for i, metric_name in enumerate(metrics["meta"]["legend"]):
+                metric_legend = metric_name.split(":")[1:]
+                collector_type = metric_legend[0]
+                collector = metric_legend[1]
+                metric_type = metric_legend[2]
+                extra_tags = {f"{collector_type}": collector}
 
-            if collector_type == "vm":
-                vm = get_or_set(vms, collector, lookup_vm_name, xen)
-                extra_tags["vm"] = vm
-                extra_tags["vm_uuid"] = collector
-            elif collector_type == "host":
-                host = get_or_set(hosts, collector, lookup_host_name, xen)
-                extra_tags["host"] = host
-                extra_tags["host_uuid"] = collector
+                if collector_type == "host":
+                    extra_tags["host_ip"] = xen_host;    
 
-            if collector_type == "host" and "sr_" in metric_type:
-                x = metric_type.split("sr_")[1]
-                sr = get_or_set(srs, x.split("_")[0], lookup_sr_name_by_uuid, xen)
-                extra_tags["sr"] = sr
-                extra_tags["sr_uuid"] = x.split("_")[0]
-                metric_type = "sr_" + "_".join(x.split("_")[1:])
+                if collector_type == "vm":
+                    vm = get_or_set(vms, collector, lookup_vm_name, xen)
+                    extra_tags["vm"] = vm
+                    extra_tags["vm_uuid"] = collector
+                elif collector_type == "host":
+                    host = get_or_set(hosts, collector, lookup_host_name, xen)
+                    extra_tags["host"] = host
+                    extra_tags["host_uuid"] = collector
 
-            # Handle SR metrics which don't have a full UUID (and don't have sr_)
-            if (
-                collector_type == "host"
-                and len(metric_type.split("_")[-1]) == 8
-                and "_".join(metric_type.split("_")[0:-1]) in sr_metrics
-            ):
-                short_sr = metric_type.split("_")[-1]
-                long_sr = find_full_sr_uuid(short_sr, xen, halt_on_no_uuid)
-                if long_sr is not None:
-                    sr = get_or_set(srs, long_sr, lookup_sr_name_by_uuid, xen)
+                if collector_type == "host" and "sr_" in metric_type:
+                    x = metric_type.split("sr_")[1]
+                    sr = get_or_set(srs, x.split("_")[0], lookup_sr_name_by_uuid, xen)
                     extra_tags["sr"] = sr
-                    extra_tags["sr_uuid"] = long_sr
-                metric_type = "_".join(metric_type.split("_")[0:-1])
+                    extra_tags["sr_uuid"] = x.split("_")[0]
+                    metric_type = "sr_" + "_".join(x.split("_")[1:])
 
-            if collector_type == "vm" and "vbd_" in metric_type:
-                x = metric_type.split("vbd_")[1]
-                extra_tags["vbd"] = x.split("_")[0]
-                metric_type = "vbd_" + "_".join(x.split("_")[1:])
+                # Handle SR metrics which don't have a full UUID (and don't have sr_)
+                if (
+                    collector_type == "host"
+                    and len(metric_type.split("_")[-1]) == 8
+                    and "_".join(metric_type.split("_")[0:-1]) in sr_metrics
+                ):
+                    short_sr = metric_type.split("_")[-1]
+                    long_sr = find_full_sr_uuid(short_sr, xen, halt_on_no_uuid)
+                    if long_sr is not None:
+                        sr = get_or_set(srs, long_sr, lookup_sr_name_by_uuid, xen)
+                        extra_tags["sr"] = sr
+                        extra_tags["sr_uuid"] = long_sr
+                    metric_type = "_".join(metric_type.split("_")[0:-1])
 
-            if collector_type == "vm" and "vif_" in metric_type:
-                x = metric_type.split("vif_")[1]
-                extra_tags["vif"] = x.split("_")[0]
-                metric_type = "vif_" + "_".join(x.split("_")[1:])
+                if collector_type == "vm" and "vbd_" in metric_type:
+                    x = metric_type.split("vbd_")[1]
+                    extra_tags["vbd"] = x.split("_")[0]
+                    metric_type = "vbd_" + "_".join(x.split("_")[1:])
 
-            if collector_type == "host" and "pif_" in metric_type:
-                x = metric_type.split("pif_")[1]
-                extra_tags["pif"] = x.split("_")[0]
-                metric_type = "pif_" + "_".join(x.split("_")[1:])
+                if collector_type == "vm" and "vif_" in metric_type:
+                    x = metric_type.split("vif_")[1]
+                    extra_tags["vif"] = x.split("_")[0]
+                    metric_type = "vif_" + "_".join(x.split("_")[1:])
 
-            if "cpu" in metric_type:
-                x = metric_type.split("cpu")[1]
-                if x.isnumeric():
-                    extra_tags["cpu"] = x
-                    metric_type = "cpu"
-                elif "-" in x:
+                if collector_type == "host" and "pif_" in metric_type:
+                    x = metric_type.split("pif_")[1]
+                    extra_tags["pif"] = x.split("_")[0]
+                    metric_type = "pif_" + "_".join(x.split("_")[1:])
+
+                if "cpu" in metric_type:
+                    x = metric_type.split("cpu")[1]
+                    if x.isnumeric():
+                        extra_tags["cpu"] = x
+                        metric_type = "cpu"
+                    elif "-" in x:
+                        extra_tags["cpu"] = x.split("-")[0]
+                        metric_type = "cpu_" + x.split("-")[1]
+                if "CPU" in metric_type:
+                    x = metric_type.split("CPU")[1]
                     extra_tags["cpu"] = x.split("-")[0]
-                    metric_type = "cpu_" + x.split("-")[1]
-            if "CPU" in metric_type:
-                x = metric_type.split("CPU")[1]
-                extra_tags["cpu"] = x.split("-")[0]
-                metric_type = "cpu_" + "_".join(x.split("-")[1:])
+                    metric_type = "cpu_" + "_".join(x.split("-")[1:])
 
-            # Normalize metric names to lowercase and underscores
-            metric_type = metric_type.lower().replace("-", "_")
+                # Normalize metric names to lowercase and underscores
+                metric_type = metric_type.lower().replace("-", "_")
 
-            tags = {f'{k}="{v}"' for k, v in extra_tags.items()}
-            output += f"xen_{collector_type}_{metric_type}{{{', '.join(tags)}}} {metrics['data'][0]['values'][i]}\n"
-        collector_end_time = time.perf_counter()
-        output += f"xen_collector_duration_seconds {collector_end_time - collector_start_time}\n"
-        return output
+                tags = {f'{k}="{v}"' for k, v in extra_tags.items()}
+                output += f"xen_{collector_type}_{metric_type}{{{', '.join(tags)}}} {metrics['data'][0]['values'][i]}\n"
+    except BaseException as e:
+        print(e)
+        xen_host_up = False
+    collector_end_time = time.perf_counter()
+    output += f"xen_collector_duration_seconds {collector_end_time - collector_start_time}\n"
+    xen_host_up_extra_tags = {}
+    xen_host_up_extra_tags["host_ip"] = xen_host
+    tags = {f'{k}="{v}"' for k, v in xen_host_up_extra_tags.items()}
+    output += f"xen_host_up{{{', '.join(tags)}}} {1 if xen_host_up == True else 0}\n"
+    return output
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
