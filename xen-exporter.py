@@ -39,7 +39,7 @@ def lookup_sr_uuid_by_ref(sr_ref, session):
     return session.xenapi.SR.get_uuid(sr_ref)
 
 
-def find_full_sr_uuid(beginning_uuid, xen):
+def find_full_sr_uuid(beginning_uuid, xen, halt_on_no_uuid):
     for i in range(0, 2):
         uuid = list(filter(lambda x: x.startswith(beginning_uuid), all_srs))
         if len(uuid) == 0:
@@ -54,11 +54,11 @@ def find_full_sr_uuid(beginning_uuid, xen):
             continue  # skip the rest of the loop and try the search again
         elif len(uuid) > 1:
             raise Exception(
-                f"Found multiple SRs with starting with UUID {beginning_uuid}"
+                f"Found multiple SRs starting with UUID {beginning_uuid}"
             )
         uuid = uuid[0]
         return uuid
-    raise Exception(f"Found no SRs with starting with UUID {beginning_uuid}")
+    if halt_on_no_uuid: raise Exception(f"Found no SRs starting with UUID {beginning_uuid}")
 
 
 def get_or_set(d, key, func, *args):
@@ -123,6 +123,9 @@ def collect_metrics():
     verify_ssl = os.getenv("XEN_SSL_VERIFY", "true")
     verify_ssl = True if verify_ssl.lower() == "true" else False
 
+    halt_on_no_uuid = os.getenv("HALT_ON_NO_UUID", "false")
+    halt_on_no_uuid = True if halt_on_no_uuid.lower() == "true" else False
+
     xen_poolmaster = collect_poolmaster()
     collector_start_time = time.perf_counter()
 
@@ -173,10 +176,11 @@ def collect_metrics():
                 and "_".join(metric_type.split("_")[0:-1]) in sr_metrics
             ):
                 short_sr = metric_type.split("_")[-1]
-                long_sr = find_full_sr_uuid(short_sr, xen)
-                sr = get_or_set(srs, long_sr, lookup_sr_name_by_uuid, xen)
-                extra_tags["sr"] = sr
-                extra_tags["sr_uuid"] = long_sr
+                long_sr = find_full_sr_uuid(short_sr, xen, halt_on_no_uuid)
+                if long_sr is not None:
+                    sr = get_or_set(srs, long_sr, lookup_sr_name_by_uuid, xen)
+                    extra_tags["sr"] = sr
+                    extra_tags["sr_uuid"] = long_sr
                 metric_type = "_".join(metric_type.split("_")[0:-1])
 
             if collector_type == "vm" and "vbd_" in metric_type:

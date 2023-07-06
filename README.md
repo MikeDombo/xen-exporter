@@ -9,6 +9,8 @@ Automatically exports _all_ statistics from the [RRD metrics database](https://x
 docker run -e XEN_USER=root -e XEN_PASSWORD=<password> -e XEN_HOST=<host> -e XEN_SSL_VERIFY=true -p 9100:9100 --rm ghcr.io/mikedombo/xen-exporter:latest
 ```
 
+> HALT_ON_NO_UUID - optional, false by default. Ignores metrics with no UUID
+
 # Grafana
 A Grafana dashboard is [available here](https://grafana.com/grafana/dashboards/16588) (id 16588), which graphs most of the critical metrics
 gathered by this exporter.
