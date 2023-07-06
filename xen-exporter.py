@@ -177,7 +177,7 @@ def collect_metrics():
             ):
                 short_sr = metric_type.split("_")[-1]
                 long_sr = find_full_sr_uuid(short_sr, xen, halt_on_no_uuid)
-                if(long_sr is not None): ## 
+                if long_sr is not None:
                     sr = get_or_set(srs, long_sr, lookup_sr_name_by_uuid, xen)
                     extra_tags["sr"] = sr
                     extra_tags["sr_uuid"] = long_sr
