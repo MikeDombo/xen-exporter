@@ -128,6 +128,8 @@ def collect_metrics():
     halt_on_no_uuid = os.getenv("HALT_ON_NO_UUID", "false")
     halt_on_no_uuid = True if halt_on_no_uuid.lower() == "true" else False
 
+    xen_host_up_extra_tags = {}
+
     output = ""
 
     collector_start_time = time.perf_counter()
@@ -229,7 +231,6 @@ def collect_metrics():
         xen_host_up = False
     collector_end_time = time.perf_counter()
     output += f"xen_collector_duration_seconds {collector_end_time - collector_start_time}\n"
-    xen_host_up_extra_tags = {}
     xen_host_up_extra_tags["host_ip"] = xen_host
     tags = {f'{k}="{v}"' for k, v in xen_host_up_extra_tags.items()}
     output += f"xen_host_up{{{', '.join(tags)}}} {1 if xen_host_up == True else 0}\n"
