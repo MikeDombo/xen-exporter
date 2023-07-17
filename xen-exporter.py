@@ -2,6 +2,7 @@ import base64
 import http.server
 import urllib.request
 import time
+import traceback
 import ssl
 import os
 import re
@@ -242,10 +243,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         super().__init__(request, client_address, server)
 
     def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain")
-        self.end_headers()
-        self.wfile.write(collect_metrics().encode("utf-8"))
+        try:
+            metric_output = collect_metrics().encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+            self.wfile.write(metric_output)
+        except BaseException:
+            print(traceback.format_exc(), flush=True)
+            self.send_response(500)
 
 
 if __name__ == "__main__":
