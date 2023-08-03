@@ -25,9 +25,9 @@ def lookup_vm_name(vm_uuid, session):
 
 def lookup_sr_name_by_uuid(sr_uuid, session):
     try:
-       return session.xenapi.SR.get_name_label(session.xenapi.SR.get_by_uuid(sr_uuid))
+        return session.xenapi.SR.get_name_label(session.xenapi.SR.get_by_uuid(sr_uuid))
     except XenAPI.XenAPI.Failure:
-       return sr_uuid
+        return sr_uuid
 
 
 def lookup_host_name(host_uuid, session):
@@ -54,12 +54,11 @@ def find_full_sr_uuid(beginning_uuid, xen, halt_on_no_uuid):
             )
             continue  # skip the rest of the loop and try the search again
         elif len(uuid) > 1:
-            raise Exception(
-                f"Found multiple SRs starting with UUID {beginning_uuid}"
-            )
+            raise Exception(f"Found multiple SRs starting with UUID {beginning_uuid}")
         uuid = uuid[0]
         return uuid
-    if halt_on_no_uuid: raise Exception(f"Found no SRs starting with UUID {beginning_uuid}")
+    if halt_on_no_uuid:
+        raise Exception(f"Found no SRs starting with UUID {beginning_uuid}")
 
 
 def get_or_set(d, key, func, *args):
@@ -67,30 +66,35 @@ def get_or_set(d, key, func, *args):
         d[key] = func(key, *args)
     return d[key]
 
-def collect_poolmaster(xen_user: str, xen_password: str, xen_host: str, verify_ssl: bool):
+
+def collect_poolmaster(
+    xen_user: str, xen_password: str, xen_host: str, verify_ssl: bool
+):
     try:
-       with Xen("https://" + xen_host, xen_user, xen_password, verify_ssl) as xen:
-          poolmaster = xen_host
+        with Xen("https://" + xen_host, xen_user, xen_password, verify_ssl) as xen:
+            poolmaster = xen_host
     except XenAPI.XenAPI.Failure as e:
-       ipPattern = re.compile('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
-       poolmaster = re.findall(ipPattern,str(e))[0]
+        ipPattern = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
+        poolmaster = re.findall(ipPattern, str(e))[0]
     return poolmaster
+
 
 def collect_sr_usage(session: XenAPI.Session):
     sr_records = session.xenapi.SR.get_all_records()
     output = ""
     for sr_record in sr_records.values():
-        sr_name_label = sr_record['name_label']
-        sr_uuid = sr_record['uuid']
-        if 'physical_size' in sr_record:
+        sr_name_label = sr_record["name_label"]
+        sr_uuid = sr_record["uuid"]
+        if "physical_size" in sr_record:
             output += f'xen_sr_physical_size{{sr_uuid="{sr_uuid}", sr="{sr_name_label}", type="{sr_record["type"]}", content_type="{sr_record["content_type"]}"}} {str(sr_record["physical_size"])}\n'
 
-        if 'physical_utilisation' in sr_record:
+        if "physical_utilisation" in sr_record:
             output += f'xen_sr_physical_utilization{{sr_uuid="{sr_uuid}", sr="{sr_name_label}", type="{sr_record["type"]}", content_type="{sr_record["content_type"]}"}} {str(sr_record["physical_utilisation"])}\n'
 
-        if 'virtual_allocation' in sr_record:
+        if "virtual_allocation" in sr_record:
             output += f'xen_sr_virtual_allocation{{sr_uuid="{sr_uuid}", sr="{sr_name_label}", type="{sr_record["type"]}", content_type="{sr_record["content_type"]}"}} {str(sr_record["virtual_allocation"])}\n'
     return output
+
 
 class Xen:
     def __init__(self, url, username, password, verify_ssl):
