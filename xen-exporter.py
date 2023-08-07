@@ -151,7 +151,6 @@ def collect_metrics():
     collector_start_time = time.perf_counter()
     try:
         xen_poolmaster = collect_poolmaster(xen_user=xen_user, xen_password=xen_password, xen_host=xen_host, verify_ssl=verify_ssl)
-        collector_start_time = time.perf_counter()
         with Xen("https://" + xen_poolmaster, xen_user, xen_password, verify_ssl) as xen:
             url = f"https://{xen_host}/rrd_updates?start={int(time.time()-10)}&json=true&host=true&cf=AVERAGE"
 
@@ -242,12 +241,15 @@ def collect_metrics():
 
                 tags = {f'{k}="{v}"' for k, v in extra_tags.items()}
                 output += f"xen_{collector_type}_{metric_type}{{{', '.join(tags)}}} {metrics['data'][0]['values'][i]}\n"
+
+            output += collect_sr_usage(xen)
     except BaseException as e:
         print(e)
         xen_host_up = False
     collector_end_time = time.perf_counter()
     output += collect_sr_usage(xen)
     output += f"xen_collector_duration_seconds {collector_end_time - collector_start_time}\n"
+    xen_host_up_extra_tags = {}
     xen_host_up_extra_tags["host_ip"] = xen_host
     tags = {f'{k}="{v}"' for k, v in xen_host_up_extra_tags.items()}
     output += f"xen_host_up{{{', '.join(tags)}}} {1 if xen_host_up == True else 0}\n"
