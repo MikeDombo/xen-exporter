@@ -241,7 +241,6 @@ def collect_metrics():
 
                 tags = {f'{k}="{v}"' for k, v in extra_tags.items()}
                 output += f"xen_{collector_type}_{metric_type}{{{', '.join(tags)}}} {metrics['data'][0]['values'][i]}\n"
-
             output += collect_sr_usage(xen)
     except BaseException as e:
         print(e)
