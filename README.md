@@ -70,6 +70,7 @@ When using a cluster, assumes that the username and password of the poolmaster a
 # List of all statistics
 <details>
 
+- xen_host_up
 - xen_host_avgqu_sz
 - xen_host_cpu
 - xen_host_cpu_avg
