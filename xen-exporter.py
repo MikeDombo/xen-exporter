@@ -67,12 +67,7 @@ def get_or_set(d, key, func, *args):
         d[key] = func(key, *args)
     return d[key]
 
-def collect_poolmaster():
-    xen_user = os.getenv("XEN_USER", "root")
-    xen_password = os.getenv("XEN_PASSWORD", "")
-    xen_host = os.getenv("XEN_HOST", "localhost")
-    verify_ssl = "false"
-    verify_ssl = True if verify_ssl.lower() == "true" else False
+def collect_poolmaster(xen_user: str, xen_password: str, xen_host: str, verify_ssl: bool):
     try:
        with Xen("https://" + xen_host, xen_user, xen_password, verify_ssl) as xen:
           poolmaster = xen_host
@@ -80,6 +75,22 @@ def collect_poolmaster():
        ipPattern = re.compile('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
        poolmaster = re.findall(ipPattern,str(e))[0]
     return poolmaster
+
+def collect_sr_usage(session: XenAPI.Session):
+    sr_records = session.xenapi.SR.get_all_records()
+    output = ""
+    for sr_record in sr_records.values():
+        sr_name_label = sr_record['name_label']
+        sr_uuid = sr_record['uuid']
+        if 'physical_size' in sr_record:
+            output += f'xen_sr_physical_size{{sr_uuid="{sr_uuid}", sr="{sr_name_label}", type="{sr_record["type"]}", content_type="{sr_record["content_type"]}"}} {str(sr_record["physical_size"])}\n'
+
+        if 'physical_utilisation' in sr_record:
+            output += f'xen_sr_physical_utilization{{sr_uuid="{sr_uuid}", sr="{sr_name_label}", type="{sr_record["type"]}", content_type="{sr_record["content_type"]}"}} {str(sr_record["physical_utilisation"])}\n'
+
+        if 'virtual_allocation' in sr_record:
+            output += f'xen_sr_virtual_allocation{{sr_uuid="{sr_uuid}", sr="{sr_name_label}", type="{sr_record["type"]}", content_type="{sr_record["content_type"]}"}} {str(sr_record["virtual_allocation"])}\n'
+    return output
 
 class Xen:
     def __init__(self, url, username, password, verify_ssl):
@@ -135,7 +146,7 @@ def collect_metrics():
 
     collector_start_time = time.perf_counter()
     try:
-        xen_poolmaster = collect_poolmaster()
+        xen_poolmaster = collect_poolmaster(xen_user=xen_user, xen_password=xen_password, xen_host=xen_host, verify_ssl=verify_ssl)
         collector_start_time = time.perf_counter()
         with Xen("https://" + xen_poolmaster, xen_user, xen_password, verify_ssl) as xen:
             url = f"https://{xen_host}/rrd_updates?start={int(time.time()-10)}&json=true&host=true&cf=AVERAGE"
@@ -231,6 +242,7 @@ def collect_metrics():
         print(e)
         xen_host_up = False
     collector_end_time = time.perf_counter()
+    output += collect_sr_usage(xen)
     output += f"xen_collector_duration_seconds {collector_end_time - collector_start_time}\n"
     xen_host_up_extra_tags["host_ip"] = xen_host
     tags = {f'{k}="{v}"' for k, v in xen_host_up_extra_tags.items()}
