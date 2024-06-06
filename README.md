@@ -66,6 +66,8 @@ No Prometheus help (comments) or types are currently emitted since all the metri
 Meaning that there is no list in the code of what metrics will be emitted, nor is there a list of nice descriptions for each metric type.
 When using a cluster, assumes that the username and password of the poolmaster and hosts are the same.
 
+If you use XEN_MODE=pool, you must have the same credentials for all hosts in your pool
+
 # TODO
 - Proper Prometheus help and types for known metrics
 - Additional metrics beyond what RRD provides? Perhaps like https://github.com/lovoo/xenstats_exporter
