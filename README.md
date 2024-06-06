@@ -10,6 +10,7 @@ docker run -e XEN_USER=root -e XEN_PASSWORD=<password> -e XEN_HOST=<host> -e XEN
 ```
 
 > HALT_ON_NO_UUID - optional, false by default. Ignores metrics with no UUID
+
 > XEN_MODE - optional, "host" by default. "pool" if you want to parse all hosts from the pool
 
 # Grafana
