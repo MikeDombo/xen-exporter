@@ -11,6 +11,8 @@ docker run -e XEN_USER=root -e XEN_PASSWORD=<password> -e XEN_HOST=<host> -e XEN
 
 > HALT_ON_NO_UUID - optional, false by default. Ignores metrics with no UUID
 
+> XEN_MODE - optional, "host" by default. "pool" if you want to parse all hosts from the pool
+
 # Grafana
 A Grafana dashboard is [available here](https://grafana.com/grafana/dashboards/16588) (id 16588), which graphs most of the critical metrics
 gathered by this exporter.
@@ -63,6 +65,8 @@ prometheus.yml
 No Prometheus help (comments) or types are currently emitted since all the metrics are being formatted almost entirely automatically.
 Meaning that there is no list in the code of what metrics will be emitted, nor is there a list of nice descriptions for each metric type.
 When using a cluster, assumes that the username and password of the poolmaster and hosts are the same.
+
+If you use XEN_MODE=pool, you must have the same credentials for all hosts in your pool
 
 # TODO
 - Proper Prometheus help and types for known metrics
