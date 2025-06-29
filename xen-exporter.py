@@ -26,7 +26,10 @@ def get_all_hosts_in_pool(session):
     return list
 
 def lookup_vm_name(vm_uuid, session):
-    return session.xenapi.VM.get_name_label(session.xenapi.VM.get_by_uuid(vm_uuid))
+    try:
+        return session.xenapi.VM.get_name_label(session.xenapi.VM.get_by_uuid(vm_uuid))
+    except XenAPI.XenAPI.Failure:
+        return vm_uuid
 
 
 def lookup_sr_name_by_uuid(sr_uuid, session):
