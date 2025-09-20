@@ -84,7 +84,11 @@ def collect_poolmaster(
             poolmaster = xen_host
     except XenAPI.XenAPI.Failure as e:
         ipPattern = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
-        poolmaster = re.findall(ipPattern, str(e))[0]
+        ma = re.findall(ipPattern, str(e))
+        if ma is not None and len(ma)>1 :
+            poolmaster = ma[0]
+        else:
+            poolmaster = xen_host
     return poolmaster
 
 def collect_sr_usage(session: XenAPI.Session):
@@ -271,6 +275,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except BaseException:
             print(traceback.format_exc(), flush=True)
             self.send_response(500)
+            self.end_headers()
 
 
 if __name__ == "__main__":
