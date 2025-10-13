@@ -170,6 +170,8 @@ def collect_metrics():
 
         output = ""
         for xen_host in xen_hosts:
+            host_name = None
+            host_uuid = None
             url = f"https://{xen_host}/rrd_updates?start={int(time.time()-10)}&json=true&host=true&cf=AVERAGE"
 
             req = urllib.request.Request(url)
@@ -190,16 +192,32 @@ def collect_metrics():
                 collector_type = metric_legend[0]
                 collector = metric_legend[1]
                 metric_type = metric_legend[2]
-                extra_tags = {f"{collector_type}": collector}
+
+                if collector_type == 'host':
+                    host = get_or_set(hosts, collector, lookup_host_name, xen)
+                    host_name = host
+                    host_uuid = collector
+                    break
+
+            if host_name is None or host_uuid is None:
+                raise RuntimeError("Hostname or UUID not found in any retrieved data")
+
+            for i, metric_name in enumerate(metrics["meta"]["legend"]):
+                metric_legend = metric_name.split(":")[1:]
+                collector_type = metric_legend[0]
+                collector = metric_legend[1]
+                metric_type = metric_legend[2]
+                extra_tags = {collector_type: collector}
 
                 if collector_type == "vm":
                     vm = get_or_set(vms, collector, lookup_vm_name, xen)
                     extra_tags["vm"] = vm
                     extra_tags["vm_uuid"] = collector
-                elif collector_type == "host":
-                    host = get_or_set(hosts, collector, lookup_host_name, xen)
-                    extra_tags["host"] = host
-                    extra_tags["host_uuid"] = collector
+                    extra_tags['host'] = host_name
+                    extra_tags['host_uuid'] = host_uuid
+                elif collector_type == 'host':
+                    extra_tags['host'] = host_name
+                    extra_tags['host_uuid'] = host_uuid
 
                 if collector_type == "host" and "sr_" in metric_type:
                     x = metric_type.split("sr_")[1]
