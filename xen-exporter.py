@@ -83,7 +83,7 @@ def collect_poolmaster(
         with Xen("https://" + xen_host, xen_user, xen_password, verify_ssl) as xen:
             poolmaster = xen_host
     except XenAPI.XenAPI.Failure as e:
-        ipPattern = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
+        ipPattern = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
         ma = re.findall(ipPattern, str(e))
         if ma is not None and len(ma)>1 :
             poolmaster = ma[0]
