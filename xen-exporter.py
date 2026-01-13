@@ -22,7 +22,7 @@ def get_all_hosts_in_pool(session):
     list = []
     xen_hosts = session.xenapi.host.get_all()
     for host in xen_hosts:
-        list.append(session.xenapi.PIF.get_record(session.xenapi.host.get_management_interface(host))['IP'])
+        list.append(session.xenapi.host.get_address(host))
     return list
 
 def lookup_vm_name(vm_uuid, session):
