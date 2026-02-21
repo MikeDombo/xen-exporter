@@ -25,4 +25,4 @@ jobs:
       with:
         push: true
         tags: |
-          mikedombo/xen-exporter:latest
+          ghcr.io/mikedombo/xen-exporter:latest
