@@ -107,6 +107,7 @@ If you use XEN_MODE=pool, you must have the same credentials for all hosts in yo
 - xen_host_sr_cache_misses
 - xen_host_sr_cache_size
 - xen_host_tapdisks_in_low_memory_mode
+- xen_host_up
 - xen_host_write
 - xen_host_write_latency
 - xen_host_xapi_allocation_kib
