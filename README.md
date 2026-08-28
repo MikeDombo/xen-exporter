@@ -13,6 +13,8 @@ docker run -e XEN_USER=root -e XEN_PASSWORD=<password> -e XEN_HOST=<host> -e XEN
 
 > XEN_MODE - optional, "host" by default. "pool" if you want to parse all hosts from the pool
 
+> XEN_TIMEOUT - optional, 10 (seconds) by default. How long to wait on an unresponsive host before reporting it as down via `xen_host_up`
+
 # Grafana
 A Grafana dashboard is [available here](https://grafana.com/grafana/dashboards/16588) (id 16588), which graphs most of the critical metrics
 gathered by this exporter.

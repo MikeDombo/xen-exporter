@@ -3,6 +3,7 @@ import http.server
 import urllib.request
 import time
 import traceback
+import socket
 import ssl
 import os
 import re
@@ -10,6 +11,10 @@ import re
 import pyjson5
 import XenAPI
 
+
+# Without a timeout, an unresponsive host hangs the scrape indefinitely and
+# xen_host_up never gets the chance to report it as down.
+XEN_TIMEOUT = float(os.getenv("XEN_TIMEOUT", "10"))
 
 # We aggressively cache the SRs, VMs, and hosts to avoid calling XAPI which can double the runtime (~0.8s to ~1.5s)
 # Mapping from UUID to human readable name
@@ -155,14 +160,28 @@ def collect_metrics():
     halt_on_no_uuid = True if halt_on_no_uuid.lower() == "true" else False
 
     collector_start_time = time.perf_counter()
-    xen_poolmaster = collect_poolmaster(
-        xen_user=xen_user,
-        xen_password=xen_password,
-        xen_host=xen_host,
-        verify_ssl=verify_ssl,
-    )
+    try:
+        xen_poolmaster = collect_poolmaster(
+            xen_user=xen_user,
+            xen_password=xen_password,
+            xen_host=xen_host,
+            verify_ssl=verify_ssl,
+        )
+        xen_session = Xen(
+            "https://" + xen_poolmaster, xen_user, xen_password, verify_ssl
+        )
+    except Exception as e:
+        # A network-level failure here (no route, refused, timed out) is not a
+        # XenAPI.Failure, so without this it propagates and the scrape returns
+        # a 500 instead of reporting the host as down.
+        print(f"Failed to reach the pool master via {xen_host}: {e}", flush=True)
+        collector_end_time = time.perf_counter()
+        return (
+            f'xen_host_up{{host_ip="{xen_host}"}} 0\n'
+            f"xen_collector_duration_seconds {collector_end_time - collector_start_time}\n"
+        )
 
-    with Xen("https://" + xen_poolmaster, xen_user, xen_password, verify_ssl) as xen:
+    with xen_session as xen:
         if xen_mode == "host":
             xen_hosts =[xen_host] 
         else:
@@ -185,7 +204,9 @@ def collect_metrics():
                     ),
                 )
                 res = urllib.request.urlopen(
-                    req, context=None if verify_ssl else ssl._create_unverified_context()
+                    req,
+                    context=None if verify_ssl else ssl._create_unverified_context(),
+                    timeout=XEN_TIMEOUT,
                 )
                 metrics = pyjson5.decode_io(res)
 
@@ -307,6 +328,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
 if __name__ == "__main__":
     port = os.getenv("PORT", "9100")
     bind = os.getenv("BIND", "0.0.0.0")
+
+    # XenAPI talks XML-RPC over a plain socket and takes no timeout argument,
+    # so this is what stops a dead host from blocking the collector forever.
+    socket.setdefaulttimeout(XEN_TIMEOUT)
 
     if os.getenv("XEN_MODE"):
         if os.getenv("XEN_MODE", "host") != "host" and os.getenv("XEN_MODE", "host") != "pool":
